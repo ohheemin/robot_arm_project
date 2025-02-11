@@ -2,36 +2,28 @@
 Changelog for package dynamixel_sdk
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-3.7.51 (2021-04-14)
+3.7.60 (2022-06-03)
 -------------------
-* Add Sync / Bulk read write ROS examples
-* Contributors: JaehyunShim
+* ROS2 Humble Hawksbill supported
 
-3.7.41 (2020-08-12)
+3.7.40 (2021-04-14)
 -------------------
-* DYNAMIXEL SDK ROS example initial commit.
-* Bug fix for 4.5Mbps support (#430)
-* Contributors: Zerom, Will Son
+* Add ROS 2 basic example
+* Bug fix
+* Contributors: Will Son
 
-3.7.31 (2020-07-13)
+3.7.30 (2020-07-13)
 -------------------
-* ROS 1 Noetic Ninjemys support
-* 3x faster getError member function of GroupSyncRead Class
+* ROS 2 Eloquent Elusor supported
+* ROS 2 Foxy Fitzroy supported
+* 3x faster getError member function of GroupSync&BulkRead Class #388
 * Contributors: developer0hye, Zerom, Will Son
 
-3.7.21 (2019-09-06)
+3.7.20 (2019-09-06)
 -------------------
 * Fixed buffer overflow bug (rxpacket size)
 * Fixed typo in the package.xml and header files
 * Contributors: Chris Lalancette, Zerom, Pyo
-
-3.7.11 (2019-08-19)
--------------------
-- Updated C lib and DLL file
-- Changed C# / win32 / protocol_combined output path
-- Fixed "protocol_combined" example bug
-- Fixed typo in bulk_read_write.py
-* Contributors: Pyo, Zerom
 
 3.7.10 (2019-08-19)
 -------------------
