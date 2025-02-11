@@ -1,102 +1,78 @@
 ################################################################################
 # Set minimum required version of cmake, project name and compile options
 ################################################################################
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(dynamixel_sdk)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable)
+endif()
 
 ################################################################################
-# Find catkin packages and libraries for catkin and system dependencies
+# Find ament packages and libraries for ament and system dependencies
 ################################################################################
-find_package(catkin REQUIRED COMPONENTS roscpp rospy)
-
-################################################################################
-# Setup for python modules and scripts
-################################################################################
-catkin_python_setup()
-
-################################################################################
-# Declare ROS messages, services and actions
-################################################################################
-
-################################################################################
-# Declare ROS dynamic reconfigure parameters
-################################################################################
-
-################################################################################
-# Declare catkin specific configuration to be passed to dependent projects
-################################################################################
-catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp rospy
-  LIBRARIES dynamixel_sdk
-)
+find_package(ament_cmake REQUIRED)
 
 ################################################################################
 # Build
 ################################################################################
 include_directories(
-  include/dynamixel_sdk
-  ${catkin_INCLUDE_DIRS}
+  include/${PROJECT_NAME}
+)
+
+set(DYNAMIXEL_SDK_SOURCES
+  src/dynamixel_sdk/packet_handler.cpp
+  src/dynamixel_sdk/protocol1_packet_handler.cpp
+  src/dynamixel_sdk/protocol2_packet_handler.cpp
+  src/dynamixel_sdk/group_sync_read.cpp
+  src/dynamixel_sdk/group_sync_write.cpp
+  src/dynamixel_sdk/group_bulk_read.cpp
+  src/dynamixel_sdk/group_bulk_write.cpp
+  src/dynamixel_sdk/group_fast_bulk_read.cpp
+  src/dynamixel_sdk/group_fast_sync_read.cpp
+  src/dynamixel_sdk/group_handler.cpp
+  src/dynamixel_sdk/port_handler.cpp
 )
 
 if(APPLE)
-  add_library(dynamixel_sdk
-    src/dynamixel_sdk/packet_handler.cpp
-    src/dynamixel_sdk/protocol1_packet_handler.cpp
-    src/dynamixel_sdk/protocol2_packet_handler.cpp
-    src/dynamixel_sdk/group_sync_read.cpp
-    src/dynamixel_sdk/group_sync_write.cpp
-    src/dynamixel_sdk/group_bulk_read.cpp
-    src/dynamixel_sdk/group_bulk_write.cpp
-    src/dynamixel_sdk/port_handler.cpp
+  add_library(dynamixel_sdk SHARED
+    ${DYNAMIXEL_SDK_SOURCES}
     src/dynamixel_sdk/port_handler_mac.cpp
   )
+elseif(WIN32)
+  add_library(dynamixel_sdk SHARED
+    ${DYNAMIXEL_SDK_SOURCES}
+    src/dynamixel_sdk/port_handler_windows.cpp
+  )
 else()
-  add_library(dynamixel_sdk
-    src/dynamixel_sdk/packet_handler.cpp
-    src/dynamixel_sdk/protocol1_packet_handler.cpp
-    src/dynamixel_sdk/protocol2_packet_handler.cpp
-    src/dynamixel_sdk/group_sync_read.cpp
-    src/dynamixel_sdk/group_sync_write.cpp
-    src/dynamixel_sdk/group_bulk_read.cpp
-    src/dynamixel_sdk/group_bulk_write.cpp
-    src/dynamixel_sdk/port_handler.cpp
+  add_library(dynamixel_sdk SHARED
+    ${DYNAMIXEL_SDK_SOURCES}
     src/dynamixel_sdk/port_handler_linux.cpp
   )
 endif()
 
-add_dependencies(dynamixel_sdk ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(dynamixel_sdk ${catkin_LIBRARIES})
-
 ################################################################################
 # Install
 ################################################################################
-install(TARGETS dynamixel_sdk
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+install(
+  DIRECTORY include/
+  DESTINATION include/
 )
 
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-)
-
-catkin_install_python(PROGRAMS
-  src/${PROJECT_NAME}/group_bulk_read.py
-  src/${PROJECT_NAME}/group_bulk_write.py
-  src/${PROJECT_NAME}/group_sync_read.py
-  src/${PROJECT_NAME}/group_sync_write.py
-  src/${PROJECT_NAME}/packet_handler.py
-  src/${PROJECT_NAME}/port_handler.py
-  src/${PROJECT_NAME}/protocol1_packet_handler.py
-  src/${PROJECT_NAME}/protocol2_packet_handler.py
-  src/${PROJECT_NAME}/robotis_def.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+install(
+  TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 ################################################################################
-# Test
+# Macro for ament package
 ################################################################################
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+ament_package()
