@@ -1,7 +1,13 @@
 # Dynamixel SDK Release Notes
 
+3.8.1 (2025-02-12)
+------------------
+* Added Fast Sync Read, Fast Bulk Read features
+* Contributors: Honghyun Kim, Wonho Yun
+
 3.8.0 (2025-02-12)
 ------------------
+* Last version of Dynamixel SDK for ROS 1
 * Added Fast Sync Read, Fast Bulk Read features
 * Contributors: Honghyun Kim, Wonho Yun
 
