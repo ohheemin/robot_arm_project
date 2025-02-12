@@ -2,9 +2,14 @@
 Changelog for package dynamixel_sdk_examples
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.8.0 (2025-02-12)
+------------------
+* None
+
 3.7.60 (2022-06-03)
 -------------------
-* ROS2 Humble Hawksbill supported
+* ROS 2 Humble Hawksbill supported
+* Contributors: Will Son
 
 3.7.40 (2021-04-14)
 -------------------

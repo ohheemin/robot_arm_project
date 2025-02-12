@@ -2,9 +2,15 @@
 Changelog for package dynamixel_sdk
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.8.0 (2025-02-12)
+------------------
+* Added Fast Sync Read, Fast Bulk Read features
+* Contributors: Honghyun Kim, Wonho Yun
+
 3.7.60 (2022-06-03)
 -------------------
-* ROS2 Humble Hawksbill supported
+* ROS 2 Humble Hawksbill supported
+* Contributors: Will Son
 
 3.7.40 (2021-04-14)
 -------------------
@@ -17,7 +23,7 @@ Changelog for package dynamixel_sdk
 * ROS 2 Eloquent Elusor supported
 * ROS 2 Foxy Fitzroy supported
 * 3x faster getError member function of GroupSync&BulkRead Class #388
-* Contributors: developer0hye, Zerom, Will Son
+* Contributors: Zerom, Will Son
 
 3.7.20 (2019-09-06)
 -------------------
