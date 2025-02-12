@@ -1,5 +1,15 @@
 # Dynamixel SDK Release Notes
 
+3.8.0 (2025-02-12)
+------------------
+* Added Fast Sync Read, Fast Bulk Read features
+* Contributors: Honghyun Kim, Wonho Yun
+
+3.7.60 (2022-06-03)
+-------------------
+* ROS 2 Humble Hawksbill supported
+* Contributors: Will Son
+
 3.7.51 (2021-04-14)
 -------------------
 * Update Matlab, Python, Labview examples
@@ -12,16 +22,36 @@
 * Bug fix for 4.5Mbps support (#430)
 * Contributors: Zerom, Will Son
 
+3.7.40 (2021-04-14)
+-------------------
+* Add ROS 2 basic example
+* Bug fix
+* Contributors: Will Son
+
 3.7.31 (2020-07-13)
 -------------------
 * ROS 1 Noetic Ninjemys support
 * 3x faster getError member function of GroupSyncRead Class
-* Contributors: developer0hye, Zerom, Will Son
+* Contributors: Zerom, Will Son
+
+3.7.30 (2020-07-13)
+-------------------
+* ROS 2 Eloquent Elusor supported
+* ROS 2 Foxy Fitzroy supported
+* 3x faster getError member function of GroupSync&BulkRead Class #388
+* Contributors: Zerom, Will Son
 
 3.7.21 (2019-09-06)
 -------------------
 * Fixed buffer overflow bug (rxpacket size)
 * Fixed typo in the package.xml and header files
+* Contributors: Chris Lalancette, Zerom, Pyo
+
+3.7.20 (2019-09-06)
+-------------------
+* Fixed buffer overflow bug (rxpacket size)
+* Fixed typo in the package.xml and header files
+* Contributors: Chris Lalancette, Zerom, Pyo
 
 3.7.11 (2019-08-19)
 -------------------
@@ -29,6 +59,12 @@
 * Changed C# / win32 / protocol_combined output path
 * Fixed "protocol_combined" example bug
 * Fixed typo in bulk_read_write.py
+* Contributors: Darby, Pyo
+
+3.7.10 (2019-08-19)
+-------------------
+* Supported ROS 2 Dashing Diademata
+* Contributors: Darby, Pyo
 
 3.7.0 (2019-01-03)
 ------------------
@@ -37,6 +73,7 @@
 * Fixed addStuffing() function (reduced stack memory usage)
 * Fixed memory issues [#268](https://github.com/ROBOTIS-GIT/DynamixelSDK/issues/268)
 * Fixed the broadcast ping bug in dxl_monitor
+* Contributors: Gilbert, Pyo, Zerom
 
 3.6.2 (2018-07-17)
 ------------------
@@ -44,11 +81,13 @@
 * Moved cpp library files for ROS to ros folder
 * Created an ROS package separately `#187 <https://github.com/ROBOTIS-GIT/DynamixelSDK/issues/187>`_
 * Modified the e-Manual address to emanual.robotis.com
+* Contributors: Pyo
 
 3.6.1 (2018-06-14)
 ------------------
 * Removed printTxRxResult(), printRxPacketError() `#193 <https://github.com/ROBOTIS-GIT/DynamixelSDK/issues/193>`_
 * Removed cache files
+* Contributors: Gilbert, Pyo
 
 3.6.0 (2018-03-16)
 ------------------
@@ -59,6 +98,7 @@
 * Changes: Deprecated functions removed
 * Fixes: DynamixelSDK MATLAB 2017 - new typedef (int8_t / int16_t / int32_t) applied in robotis_def.h #161 #179
 * Fixes: Added missing header file for reset and factory_reset examples #167
+* Contributors: Leon
 
 3.5.4 (2017-12-01)
 ------------------
@@ -69,15 +109,18 @@
 * Fixes: Group Syncwrite using multiple ports in c library issue solved (test code is also in this issue bulletin) #124
 * Fixes: Support getting of time on MacOSX/XCode versions that doesn't support (CLOCK_REALTIME issue) #141 #144
 * Changes: DynamixelSDK Ubuntu Linux usb ftdi latency timer fix issue - changes the default latency timer as 16 ms in all OS, but some about how to change the latency timer was commented in the codes (now the latency timer should be adjusted by yourself... see port_handler_linux source code to see details) #116
+* Contributors: Leon
 
 3.5.3 (2017-10-30)
 ------------------
 * Fixes: DynamixelSDK ROS Kinetic Issue - ARM - Debian Jessie solved by replacing target_sources func in CMake to set_property #136
+* Contributors: Leon
 
 3.5.2 (2017-09-18)
 ------------------
 * Recover: Check if the id of rxpacket is the same as the id of txpacket (c++) #82
 * Changes: Ping examples now will not show Dynamixel model number when communication is failed
+* Contributors: Leon
 
 3.5.1 (2017-08-18)
 ------------------
@@ -96,26 +139,32 @@
 * Changes: API references will be provided as doxygen (updates in c++ @ 3.5.1)
 * Changes: License changed into Apache License .2.0 (Who are using SDK in previous license can use it as it is)
 * Deprecated: printTxRxResult, printRxPacketError function will be unavailable in Dynamixel SDK 3.6.1
+* Contributors: Leon
 
 3.4.7 (2017-07-18)
 ------------------
 * hotfix - Bug in Dynamixel group control is solved temporarily
+* Contributors: Leon, Zerom
 
 3.4.6 (2017-07-07)
 ------------------
 * hotfix - now DynamixelSDK for protocol1.0 supports read/write 4Byte (for XM series)
+* Contributors: Leon
 
 3.4.5 (2017-05-23)
 ------------------
 * Merge branch 'kinetic-devel' of github.com:ROBOTIS-GIT/DynamixelSDK into kinetic-devel
+* Contributors: Leon, Zerom
 
 3.4.4 (2017-04-26)
 ------------------
 * hotfix - return delay time is changed from 4 into 8 due to the Ubuntu update 16.04.2
+* Contributors: Leon
 
 3.4.3 (2017-02-17)
 ------------------
 * DynamixelSDK C++ ver. and ROS ver. in Windows platform now can use the port number of over then 10 #45
+* Contributors: Leon
 
 3.4.2 (2017-02-16)
 ------------------
@@ -125,15 +174,18 @@
 * build files of windows c and c++ SDK rebuilt by using renewed SDK libraries
 * example source of dxl_monitor - c and cpp ver modified #50
 * Solved issue: #31, #34, #36, #50
+* Contributors: Leon
 
 3.4.1 (2016-08-22)
 ------------------
 * Added ROS package folder for ROS users
 * Modified c++'s original header files for ROS package
+* Contributors: Leon
 
 3.4.0 (2016-08-12)
 ------------------
 * Added a ROS package information for ROS users
+* Contributors: Leon, Zerom, Pyo
 
 3.3.3 (2016-08-03)
 ------------------
@@ -145,14 +197,17 @@
 * SDK MATLAB example code modified as platform version auto-detection #1
 * SDK C/C++  build file for linux used by SBC(Single Board Computer)s updated #15
 * Solved issue: #1, #15
+* Contributors: Leon, Zerom, Pyo
 
 3.3.2 (2016-06-30)
 ------------------
 * SDK Python strange printout problem solved
+* Contributors: Leon, Zerom, Pyo
 
 3.3.1 (2016-06-30)
 ------------------
 * SDK Python Errors in linux debugged
+* Contributors: Leon, Zerom, Pyo
 
 3.3.0 (2016-06-28)
 ------------------
@@ -163,11 +218,13 @@
 * SDK LabVIEW example as C version library binded source - released
 * SDK C - Bug fixed (#8)
 * Solved issue: #8
+* Contributors: Leon, Zerom, Pyo
 
 3.2.0 (2016-06-07)
 ------------------
 * SDK C version - Code Refactoring
 * SDK C version - Code style modified into ROS c++ code style
+* Contributors: Leon, Zerom, Pyo
 
 3.1.0 (2016-05-31)
 ------------------
@@ -175,19 +232,24 @@
 * Code style modified into ROS c++ code style
 * License specified in the source code
 * Solved issue: #3
+* Contributors: Leon, Zerom, Pyo
 
 3.0.3 (2016-05-18)
 ------------------
 * Linux C version source codes uploaded
+* Contributors: Leon, Zerom, Pyo
 
 3.0.2 (2016-05-17)
 ------------------
 * Windows C version source codes uploaded
+* Contributors: Leon, Zerom, Pyo
 
 3.0.1 (2016-04-26)
 ------------------
 * Windows C++ version begun to be serviced
+* Contributors: Leon, Zerom, Pyo
 
 3.0.0 (2016-03-08)
 ------------------
 * Linux C++ version source codes uploaded
+* Contributors: Leon, Zerom, Pyo
