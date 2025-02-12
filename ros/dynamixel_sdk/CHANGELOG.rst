@@ -2,7 +2,7 @@
 Changelog for package dynamixel_sdk
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-3.8.0 (2025-02-12)
+3.8.1 (2025-02-12)
 ------------------
 * Added Fast Sync Read, Fast Bulk Read features
 * Contributors: Honghyun Kim, Wonho Yun
