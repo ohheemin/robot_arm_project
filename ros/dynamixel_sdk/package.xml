@@ -16,6 +16,7 @@
   <author email="zerom@robotis.com">Zerom</author>
   <author email="willson@robotis.com">Will Son</author>
   <author>Leon</author>
+  <author email="ywh@robotis.com">Wonho Yun</author>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_python</buildtool_depend>
 

@@ -1,65 +1,94 @@
 #!/usr/bin/env python3
+
+#*******************************************************************************
+# Copyright 2021 ROBOTIS CO., LTD.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#*******************************************************************************
+
+#*******************************************************************************
+# This example is written for DYNAMIXEL X(excluding XL-320) and MX(2.0) series with U2D2.
+# For other series, please refer to the product eManual and modify the Control Table addresses and other definitions.
+# To test this example, please follow the commands below.
+#
+# Open terminal #1
+# $ ros2 run dynamixel_sdk_examples read_write_node.py
+#
+# Open terminal #2 (run one of below commands at a time)
+# $ ros2 topic pub -1 /set_position dynamixel_sdk_custom_interfaces/msg/SetPosition "{id: 1, position: 0}"
+# $ ros2 topic pub -1 /set_position dynamixel_sdk_custom_interfaces/msg/SetPosition "{id: 1, position: 1000}"
+# $ ros2 service call /get_position dynamixel_sdk_custom_interfaces/srv/GetPosition "{id: 1}"
+#
+# Author: Wonho Yun, Will Son
+#******************************************************************************/
+
 import rclpy
 from rclpy.node import Node
-from dynamixel_sdk import *  # Uses Dynamixel SDK
+from rclpy.qos import QoSProfile
+
+from dynamixel_sdk import *
 from dynamixel_sdk_custom_interfaces.msg import SetPosition
 from dynamixel_sdk_custom_interfaces.srv import GetPosition
 
-# DYNAMIXEL Control Table Addresses
-ADDR_OPERATING_MODE = 11
-ADDR_TORQUE_ENABLE = 64
-ADDR_GOAL_POSITION = 116
-ADDR_PRESENT_POSITION = 132
+# Control table address
+ADDR_OPERATING_MODE         = 11                # Control table address is different in Dynamixel model
+ADDR_TORQUE_ENABLE          = 64
+ADDR_GOAL_POSITION          = 116
+ADDR_PRESENT_POSITION       = 132
 
 # Protocol version
-PROTOCOL_VERSION = 2.0  # Default Protocol version of DYNAMIXEL X series.
+PROTOCOL_VERSION            = 2.0               # Default Protocol version of DYNAMIXEL X series.
 
 # Default settings
-DXL_ID = 1  # Default DYNAMIXEL ID value
-BAUDRATE = 1000000  # Default Baudrate of DYNAMIXEL X series
-DEVICE_NAME = "/dev/ttyUSB0"  # Change this based on your setup
+DXL_ID                      = 1                 # Dynamixel ID : 1
+BAUDRATE                    = 57600           # Dynamixel default baudrate : 57600
+DEVICE_NAME                 = "/dev/ttyUSB0"    # Check which port is being used on your controller
+                                                # ex) Windows: "COM1"   Linux: "/dev/ttyUSB0" Mac: "/dev/tty.usbserial-*"
 
 TORQUE_ENABLE               = 1                 # Value for enabling the torque
 TORQUE_DISABLE              = 0                 # Value for disabling the torque
-POSITION_CONTROL               = 3                 # Value for position control mode
-
+POSITION_CONTROL            = 3                 # Value for position control mode
 
 class ReadWriteNode(Node):
     def __init__(self):
         super().__init__('read_write_node')
-        self.get_logger().info('ReadWriteNode started.')
 
-        # Initialize PortHandler and PacketHandler
         self.port_handler = PortHandler(DEVICE_NAME)
         self.packet_handler = PacketHandler(PROTOCOL_VERSION)
 
-        # Open port
         if not self.port_handler.openPort():
             self.get_logger().error('Failed to open the port!')
             return
         self.get_logger().info('Succeeded to open the port.')
 
-        # Set baudrate
         if not self.port_handler.setBaudRate(BAUDRATE):
             self.get_logger().error('Failed to set the baudrate!')
             return
         self.get_logger().info('Succeeded to set the baudrate.')
 
         self.setup_dynamixel(DXL_ID)
+        qos = QoSProfile(depth=10)
 
-        # Create subscriber for setting position
         self.subscription = self.create_subscription(
             SetPosition,
             'set_position',
             self.set_position_callback,
-            10
+            qos
         )
 
-        # Create service for getting position
         self.srv = self.create_service(GetPosition, 'get_position', self.get_position_callback)
 
     def setup_dynamixel(self, dxl_id):
-        """Set operating mode and enable torque"""
         dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
             self.port_handler, dxl_id, ADDR_OPERATING_MODE, POSITION_CONTROL
         )
@@ -77,7 +106,6 @@ class ReadWriteNode(Node):
             self.get_logger().info('Succeeded to enable torque.')
 
     def set_position_callback(self, msg):
-        """ROS 2 subscriber callback to set goal position"""
         goal_position = msg.position
 
         dxl_comm_result, dxl_error = self.packet_handler.write4ByteTxRx(
@@ -92,7 +120,6 @@ class ReadWriteNode(Node):
             self.get_logger().info(f'Set [ID: {msg.id}] [Goal Position: {msg.position}]')
 
     def get_position_callback(self, request, response):
-        """ROS 2 service callback to get present position"""
         dxl_present_position, dxl_comm_result, dxl_error = self.packet_handler.read4ByteTxRx(
             self.port_handler, request.id, ADDR_PRESENT_POSITION
         )
@@ -104,16 +131,13 @@ class ReadWriteNode(Node):
         else:
             self.get_logger().info(f'Get [ID: {request.id}] [Present Position: {dxl_present_position}]')
 
-        # 현재 위치 데이터를 응답 값으로 설정
         response.position = dxl_present_position
         return response
 
     def __del__(self):
-        """Disable torque and close port on node shutdown"""
         self.packet_handler.write1ByteTxRx(self.port_handler, 1, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
         self.port_handler.closePort()
         self.get_logger().info('Shutting down read_write_node')
-
 
 def main(args=None):
     rclpy.init(args=args)
@@ -121,7 +145,6 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

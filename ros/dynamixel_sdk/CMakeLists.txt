@@ -16,7 +16,7 @@ endif()
 # Find ament packages and libraries for ament and system dependencies
 ################################################################################
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_python REQUIRED)  # Python 빌드 지원 추가
+find_package(ament_cmake_python REQUIRED)
 
 ################################################################################
 # Build
