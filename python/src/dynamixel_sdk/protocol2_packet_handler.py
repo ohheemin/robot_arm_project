@@ -246,8 +246,11 @@ class Protocol2PacketHandler(object):
 
         return COMM_SUCCESS
 
-    def rxPacket(self, port):
+    def rxPacket(self, port, fast_option):
         rxpacket = []
+        packet_id = MAX_ID
+        if fast_option:
+            packet_id = BROADCAST_ID
 
         result = COMM_TX_FAIL
         rx_length = 0
@@ -264,16 +267,19 @@ class Protocol2PacketHandler(object):
                         break
 
                 if idx == 0:
-                    if (rxpacket[PKT_RESERVED] != 0x00) or (rxpacket[PKT_ID] > 0xFC) or (
-                            DXL_MAKEWORD(rxpacket[PKT_LENGTH_L], rxpacket[PKT_LENGTH_H]) > RXPACKET_MAX_LEN) or (
-                            rxpacket[PKT_INSTRUCTION] != 0x55):
+                    if (rxpacket[PKT_RESERVED] != 0x00) or \
+                        (rxpacket[PKT_ID] > packet_id) or \
+                        (DXL_MAKEWORD(rxpacket[PKT_LENGTH_L], rxpacket[PKT_LENGTH_H]) > RXPACKET_MAX_LEN) or \
+                        (rxpacket[PKT_INSTRUCTION] != 0x55):
                         # remove the first byte in the packet
                         del rxpacket[0]
                         rx_length -= 1
                         continue
 
                     if wait_length != (DXL_MAKEWORD(rxpacket[PKT_LENGTH_L], rxpacket[PKT_LENGTH_H]) + PKT_LENGTH_H + 1):
-                        wait_length = DXL_MAKEWORD(rxpacket[PKT_LENGTH_L], rxpacket[PKT_LENGTH_H]) + PKT_LENGTH_H + 1
+                        wait_length = \
+                            DXL_MAKEWORD(rxpacket[PKT_LENGTH_L], rxpacket[PKT_LENGTH_H]) + \
+                            PKT_LENGTH_H + 1
                         continue
 
                     if rx_length < wait_length:
@@ -309,7 +315,7 @@ class Protocol2PacketHandler(object):
 
         port.is_using = False
 
-        if result == COMM_SUCCESS:
+        if result == COMM_SUCCESS and fast_option == False:
             rxpacket = self.removeStuffing(rxpacket)
 
         return rxpacket, result
@@ -343,7 +349,7 @@ class Protocol2PacketHandler(object):
 
         # rx packet
         while True:
-            rxpacket, result = self.rxPacket(port)
+            rxpacket, result = self.rxPacket(port, False)
             if result != COMM_SUCCESS or txpacket[PKT_ID] == rxpacket[PKT_ID]:
                 break
 
@@ -533,7 +539,7 @@ class Protocol2PacketHandler(object):
         data = []
 
         while True:
-            rxpacket, result = self.rxPacket(port)
+            rxpacket, result = self.rxPacket(port, False)
 
             if result != COMM_SUCCESS or rxpacket[PKT_ID] == dxl_id:
                 break
@@ -542,6 +548,23 @@ class Protocol2PacketHandler(object):
             error = rxpacket[PKT_ERROR]
 
             data.extend(rxpacket[PKT_PARAMETER0 + 1: PKT_PARAMETER0 + 1 + length])
+
+        return data, result, error
+
+    def fastSyncReadRx(self, port, dxl_id, length):
+        result = COMM_TX_FAIL
+        error = 0
+
+        rxpacket = None
+        data = []
+
+        rxpacket, result = self.rxPacket(port, True)
+
+        if result == COMM_SUCCESS and rxpacket[PKT_ID] == dxl_id:
+            error = rxpacket[PKT_ERROR]
+
+            # data[] : ERR + ID + Param + CRC + ERR + ID + Param + CRC + ...
+            data.extend(rxpacket[PKT_PARAMETER0: PKT_PARAMETER0 + length])
 
         return data, result, error
 
@@ -707,16 +730,20 @@ class Protocol2PacketHandler(object):
 
         return result, error
 
-    def syncReadTx(self, port, start_address, data_length, param, param_length):
+    def syncReadTx(self, port, start_address, data_length, param, param_length, fast_option):
         txpacket = [0] * (param_length + 14)
         # 14: HEADER0 HEADER1 HEADER2 RESERVED ID LEN_L LEN_H INST START_ADDR_L START_ADDR_H DATA_LEN_L DATA_LEN_H CRC16_L CRC16_H
 
         txpacket[PKT_ID] = BROADCAST_ID
-        txpacket[PKT_LENGTH_L] = DXL_LOBYTE(
-            param_length + 7)  # 7: INST START_ADDR_L START_ADDR_H DATA_LEN_L DATA_LEN_H CRC16_L CRC16_H
-        txpacket[PKT_LENGTH_H] = DXL_HIBYTE(
-            param_length + 7)  # 7: INST START_ADDR_L START_ADDR_H DATA_LEN_L DATA_LEN_H CRC16_L CRC16_H
-        txpacket[PKT_INSTRUCTION] = INST_SYNC_READ
+        # 7: INST START_ADDR_L START_ADDR_H DATA_LEN_L DATA_LEN_H CRC16_L CRC16_H
+        txpacket[PKT_LENGTH_L] = DXL_LOBYTE(param_length + 7)
+        txpacket[PKT_LENGTH_H] = DXL_HIBYTE(param_length + 7)
+
+        if fast_option:
+            txpacket[PKT_INSTRUCTION] = INST_FAST_SYNC_READ
+        else:
+            txpacket[PKT_INSTRUCTION] = INST_SYNC_READ
+
         txpacket[PKT_PARAMETER0 + 0] = DXL_LOBYTE(start_address)
         txpacket[PKT_PARAMETER0 + 1] = DXL_HIBYTE(start_address)
         txpacket[PKT_PARAMETER0 + 2] = DXL_LOBYTE(data_length)
