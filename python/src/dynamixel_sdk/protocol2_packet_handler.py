@@ -568,6 +568,35 @@ class Protocol2PacketHandler(object):
 
         return data, result, error
 
+    def fastBulkReadRx(self, port, param, param_length):
+        rxpacket, result = self.rxPacket(port, True)
+        if result != COMM_SUCCESS:
+            return {}, result
+
+        data_dict = {}
+        idx = PKT_PARAMETER0
+        packet_length = len(rxpacket)
+
+        while idx < packet_length - 2:
+            error = rxpacket[idx]
+            dxl_id = rxpacket[idx + 1]
+
+            # param에서 dxl_id의 길이 찾기
+            try:
+                param_idx = param.index(dxl_id)
+                data_length = DXL_MAKEWORD(param[param_idx + 3], param[param_idx + 4])
+            except ValueError:
+                print(f"[ERROR] ID {dxl_id}가 param 목록에 없음!")
+                break
+
+            data_segment = rxpacket[idx + 2 : idx + 2 + data_length]
+            data_dict[dxl_id] = data_segment
+
+            idx += data_length + 4  # ERR(1) + ID(1) + Data(N) + CRC(2)
+
+        return data_dict, COMM_SUCCESS
+
+
     def readTxRx(self, port, dxl_id, address, length):
         error = 0
 
@@ -755,6 +784,12 @@ class Protocol2PacketHandler(object):
         if result == COMM_SUCCESS:
             port.setPacketTimeout((11 + data_length) * param_length)
 
+        if fast_option:
+            print(f"[DEBUG] Fast Sync Read 전송 패킷 크기: {len(txpacket)} bytes")
+        else:
+            print(f"[DEBUG] Sync Read 전송 패킷 크기: {len(txpacket)} bytes")
+        print(f"[DEBUG] 실제 전송된 Instruction: {hex(txpacket[PKT_INSTRUCTION])}")
+
         return result
 
     def syncWriteTxOnly(self, port, start_address, data_length, param, param_length):
@@ -778,14 +813,17 @@ class Protocol2PacketHandler(object):
 
         return result
 
-    def bulkReadTx(self, port, param, param_length):
+    def bulkReadTx(self, port, param, param_length, fast_option):
         txpacket = [0] * (param_length + 10)
         # 10: HEADER0 HEADER1 HEADER2 RESERVED ID LEN_L LEN_H INST CRC16_L CRC16_H
 
         txpacket[PKT_ID] = BROADCAST_ID
         txpacket[PKT_LENGTH_L] = DXL_LOBYTE(param_length + 3)  # 3: INST CRC16_L CRC16_H
         txpacket[PKT_LENGTH_H] = DXL_HIBYTE(param_length + 3)  # 3: INST CRC16_L CRC16_H
-        txpacket[PKT_INSTRUCTION] = INST_BULK_READ
+        if fast_option:
+            txpacket[PKT_INSTRUCTION] = INST_FAST_BULK_READ
+        else:
+            txpacket[PKT_INSTRUCTION] = INST_BULK_READ
 
         txpacket[PKT_PARAMETER0: PKT_PARAMETER0 + param_length] = param[0: param_length]
 
@@ -797,6 +835,13 @@ class Protocol2PacketHandler(object):
                 wait_length += DXL_MAKEWORD(param[i + 3], param[i + 4]) + 10
                 i += 5
             port.setPacketTimeout(wait_length)
+            
+            if txpacket[PKT_INSTRUCTION] == INST_FAST_BULK_READ:
+                print(f"[DEBUG] Fast bulk Read 전송 패킷 크기: {len(txpacket)} bytes")
+            else:
+                print(f"[DEBUG] Bulk Read 전송 패킷 크기: {len(txpacket)} bytes")
+            print(f"[DEBUG] 실제 전송된 Instruction: {hex(txpacket[PKT_INSTRUCTION])}")
+
 
         return result
 

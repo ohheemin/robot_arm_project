@@ -38,6 +38,7 @@ INST_STATUS = 85  # 0x55
 INST_SYNC_READ = 130  # 0x82
 INST_FAST_SYNC_READ = 138  # 0x8A
 INST_BULK_WRITE = 147  # 0x93
+INST_FAST_BULK_READ = 154  # 0x9A
 
 # Communication Result
 COMM_SUCCESS = 0  # tx or rx packet communication success

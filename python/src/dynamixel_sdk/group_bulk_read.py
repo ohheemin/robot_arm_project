@@ -86,9 +86,18 @@ class GroupBulkRead:
             self.makeParam()
 
         if self.ph.getProtocolVersion() == 1.0:
-            return self.ph.bulkReadTx(self.port, self.param, len(self.data_dict.keys()) * 3)
+            return self.ph.bulkReadTx(self.port, self.param, len(self.data_dict.keys()) * 3, False)
         else:
-            return self.ph.bulkReadTx(self.port, self.param, len(self.data_dict.keys()) * 5)
+            return self.ph.bulkReadTx(self.port, self.param, len(self.data_dict.keys()) * 5, False)
+
+    def fastBulkReadTxPacket(self):
+        if self.ph.getProtocolVersion() == 1.0 or len(self.data_dict.keys()) == 0:
+            return COMM_NOT_AVAILABLE
+
+        if self.is_param_changed is True or not self.param:
+            self.makeParam()
+
+        return self.ph.bulkReadTx(self.port, self.param, len(self.data_dict.keys()) * 5, True)
 
     def rxPacket(self):
         self.last_result = False
@@ -109,12 +118,70 @@ class GroupBulkRead:
 
         return result
 
+    def fastBulkReadRxPacket(self):
+        self.last_result = False
+
+        if self.ph.getProtocolVersion() == 1.0:
+            return COMM_NOT_AVAILABLE
+
+        # 예상 수신 패킷 길이 계산 (각 ID별 Error(1) + ID(1) + DATA(N) + CRC(2))
+        rx_length = sum(self.data_dict[dxl_id][PARAM_NUM_LENGTH] + 4 for dxl_id in self.data_dict)
+
+        # 패킷 수신 (Broadcast 응답이므로 True)
+        rxpacket, result = self.ph.rxPacket(self.port, True)
+        if result != COMM_SUCCESS:
+            print(f"[ERROR] RX Packet failed: {result}")
+            return result
+
+        index = 8
+        packet_end = len(rxpacket) - 2  # CRC 2bytes 제외
+
+        while index < packet_end:
+            if index + 2 > packet_end:
+                print(f"[ERROR] Incomplete packet data at index {index}")
+                return COMM_RX_CORRUPT
+
+            error = rxpacket[index]
+            dxl_id = rxpacket[index + 1]
+
+            if dxl_id not in self.data_dict:
+                print(f"[ERROR] Unexpected ID received: {dxl_id}")
+                return COMM_RX_CORRUPT
+
+            data_length = self.data_dict[dxl_id][PARAM_NUM_LENGTH]
+
+            if index + 2 + data_length > packet_end:
+                print(f"[ERROR] Data length mismatch for ID {dxl_id}")
+                return COMM_RX_CORRUPT
+
+            # 받은 데이터를 정확히 저장
+            self.data_dict[dxl_id][PARAM_NUM_DATA] = rxpacket[index + 2 : index + 2 + data_length]
+
+            # 다음 데이터 세그먼트로 이동 (Error(1) + ID(1) + Data(N) + CRC(2))
+            index += data_length + 4
+
+        self.last_result = True
+        return COMM_SUCCESS
+
+
+
+
     def txRxPacket(self):
         result = self.txPacket()
         if result != COMM_SUCCESS:
             return result
 
         return self.rxPacket()
+
+    def fastBulkRead(self):
+        if self.ph.getProtocolVersion() == 1.0:
+            return COMM_NOT_AVAILABLE
+        
+        result = self.fastBulkReadTxPacket()
+        if result != COMM_SUCCESS:
+            return result
+        
+        return self.fastBulkReadRxPacket()
 
     def isAvailable(self, dxl_id, address, data_length):
         if self.last_result is False or dxl_id not in self.data_dict:
