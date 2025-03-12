@@ -40,13 +40,16 @@ class GroupSyncRead:
         if self.ph.getProtocolVersion() == 1.0:
             return
 
-        if not self.data_dict:  # len(self.data_dict.keys()) == 0:
+        if not self.is_param_changed:  # ✅ 추가된 최적화
             return
 
-        self.param = []
+        if not self.data_dict:
+            return
 
-        for dxl_id in self.data_dict:
-            self.param.append(dxl_id)
+        self.param = list(self.data_dict.keys())  # ✅ 불필요한 반복문 제거
+
+        self.is_param_changed = False  # ✅ 변경 이후 다시 실행되지 않도록 설정
+
 
     def addParam(self, dxl_id):
         if self.ph.getProtocolVersion() == 1.0:
@@ -134,41 +137,75 @@ class GroupSyncRead:
         if self.ph.getProtocolVersion() == 1.0:
             return COMM_NOT_AVAILABLE
 
-        result = COMM_RX_FAIL
-        rx_param_length = (self.data_length + 4) * len(self.data_dict.keys())
-        data = []
-
-        if len(self.data_dict.keys()) == 0:
+        if not self.data_dict:
             return COMM_NOT_AVAILABLE
 
-        data, result, _ = self.ph.fastSyncReadRx(self.port, BROADCAST_ID, rx_param_length)
+        num_devices = len(self.data_dict)
+        rx_param_length = (self.data_length + 4) * num_devices  # 각 ID별 (Error(1) + ID(1) + Data(N) + CRC(2))
+        
+        # 데이터 수신
+        raw_data, result, _ = self.ph.fastSyncReadRx(self.port, BROADCAST_ID, rx_param_length)
         if result != COMM_SUCCESS:
             return result
 
-        # loop for the number of DYNAMIXEL registered in the dictionary
-        for dxl_index in range(len(self.data_dict.keys())):
-            # DYNAMIXEL id is located in the second byte
-            # data[] : ERR + ID + Param + CRC + ERR + ID + Param + CRC + ...
-            id_index = data[1]
-            self.data_dict[id_index].clear()
-            self.data_dict[id_index].extend(data[2 : self.data_length + 2])
-            # delete processed packet
-            del data[0:(self.data_length + 3 + 1)]
+        print(f"[DEBUG] 실제 수신된 데이터 길이: {len(raw_data)}, 결과: {result}")
+        print(f"[DEBUG] 수신된 전체 패킷: {raw_data}")
 
-        if result == COMM_SUCCESS:
-            self.last_result = True
+        # 바이트 배열로 변환 (빠른 인덱싱을 위해)
+        raw_data = bytearray(raw_data)
 
-        return result
+        start_index = 0
+        # for _ in range(num_devices):
+        #     # 패킷 구조: Error(1) + ID(1) + Data(N) + CRC(2)
+        #     error = raw_data[start_index]
+        #     dxl_id = raw_data[start_index + 1]
+
+        #     if dxl_id not in self.data_dict:
+        #         print(f"[ERROR] Unexpected ID received: {dxl_id}")
+        #         return COMM_RX_CORRUPT
+
+        valid_ids = set(self.data_dict.keys())  # ✅ 미리 ID를 `set`으로 변환
+        for _ in range(num_devices):
+            dxl_id = raw_data[start_index + 1]
+            if dxl_id not in valid_ids:
+                print(f"[ERROR] Unexpected ID received: {dxl_id}")
+                return COMM_RX_CORRUPT
+
+
+            # 데이터 저장 (불필요한 리스트 연산 최소화)
+            self.data_dict[dxl_id] = bytearray(raw_data[start_index + 2 : start_index + 2 + self.data_length])
+
+            print(f"[DEBUG] ID {dxl_id} 데이터 저장됨: {self.data_dict[dxl_id]}")
+
+            # 다음 데이터 위치 갱신 (Error(1) + ID(1) + Data(N) + CRC(2))
+            start_index += self.data_length + 4
+
+        self.last_result = True
+        print("[DEBUG] Fast Sync Read 성공 완료")
+        return COMM_SUCCESS
+
+
+    # def txRxPacket(self):
+    #     if self.ph.getProtocolVersion() == 1.0:
+    #         return COMM_NOT_AVAILABLE
+
+    #     result = self.txPacket()
+    #     if result != COMM_SUCCESS:
+    #         return result
+
+    #     return self.rxPacket()
 
     def txRxPacket(self):
         if self.ph.getProtocolVersion() == 1.0:
             return COMM_NOT_AVAILABLE
 
-        result = self.txPacket()
-        if result != COMM_SUCCESS:
+        if (result := self.txPacket()) != COMM_SUCCESS:  # ✅ 단일 라인 최적화
             return result
 
-        return self.rxPacket()
+        return self.rxPacket()  # ✅ 바로 호출하여 딜레이 최소화
+
+
+
 
     def fastSyncRead(self):
         if self.ph.getProtocolVersion() == 1.0:
@@ -189,19 +226,39 @@ class GroupSyncRead:
 
         return True
 
+    # def getData(self, dxl_id, address, data_length):
+    #     if not self.isAvailable(dxl_id, address, data_length):
+    #         return 0
+
+    #     if data_length == 1:
+    #         return self.data_dict[dxl_id][address - self.start_address]
+    #     elif data_length == 2:
+    #         return DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address],
+    #                             self.data_dict[dxl_id][address - self.start_address + 1])
+    #     elif data_length == 4:
+    #         return DXL_MAKEDWORD(DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address + 0],
+    #                                           self.data_dict[dxl_id][address - self.start_address + 1]),
+    #                              DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address + 2],
+    #                                           self.data_dict[dxl_id][address - self.start_address + 3]))
+    #     else:
+    #         return 0
+
     def getData(self, dxl_id, address, data_length):
         if not self.isAvailable(dxl_id, address, data_length):
             return 0
 
+        start_idx = address - self.start_address
+        data = self.data_dict[dxl_id]
+
         if data_length == 1:
-            return self.data_dict[dxl_id][address - self.start_address]
+            return data[start_idx]
         elif data_length == 2:
-            return DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address],
-                                self.data_dict[dxl_id][address - self.start_address + 1])
+            return (data[start_idx] | (data[start_idx + 1] << 8))  # ✅ 함수 호출 없이 연산 처리
         elif data_length == 4:
-            return DXL_MAKEDWORD(DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address + 0],
-                                              self.data_dict[dxl_id][address - self.start_address + 1]),
-                                 DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address + 2],
-                                              self.data_dict[dxl_id][address - self.start_address + 3]))
+            return ((data[start_idx] | (data[start_idx + 1] << 8)) |
+                    ((data[start_idx + 2] | (data[start_idx + 3] << 8)) << 16))  # ✅ 최적화된 4바이트 연산
         else:
             return 0
+
+
+

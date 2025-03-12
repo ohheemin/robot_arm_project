@@ -38,23 +38,43 @@ class GroupBulkRead:
 
         self.clearParam()
 
+    # def makeParam(self):
+    #     if not self.data_dict:
+    #         return
+
+    #     self.param = []
+
+    #     for dxl_id in self.data_dict:
+    #         if self.ph.getProtocolVersion() == 1.0:
+    #             self.param.append(self.data_dict[dxl_id][2])  # LEN
+    #             self.param.append(dxl_id)  # ID
+    #             self.param.append(self.data_dict[dxl_id][1])  # ADDR
+    #         else:
+    #             self.param.append(dxl_id)  # ID
+    #             self.param.append(DXL_LOBYTE(self.data_dict[dxl_id][1]))  # ADDR_L
+    #             self.param.append(DXL_HIBYTE(self.data_dict[dxl_id][1]))  # ADDR_H
+    #             self.param.append(DXL_LOBYTE(self.data_dict[dxl_id][2]))  # LEN_L
+    #             self.param.append(DXL_HIBYTE(self.data_dict[dxl_id][2]))  # LEN_H
     def makeParam(self):
-        if not self.data_dict:
-            return
+        if not self.is_param_changed or not self.data_dict:
+            return  # ✅ 불필요한 호출 제거
 
         self.param = []
 
-        for dxl_id in self.data_dict:
+        for dxl_id, (_, start_addr, data_length) in self.data_dict.items():
             if self.ph.getProtocolVersion() == 1.0:
-                self.param.append(self.data_dict[dxl_id][2])  # LEN
-                self.param.append(dxl_id)  # ID
-                self.param.append(self.data_dict[dxl_id][1])  # ADDR
+                self.param.extend([data_length, dxl_id, start_addr])
             else:
-                self.param.append(dxl_id)  # ID
-                self.param.append(DXL_LOBYTE(self.data_dict[dxl_id][1]))  # ADDR_L
-                self.param.append(DXL_HIBYTE(self.data_dict[dxl_id][1]))  # ADDR_H
-                self.param.append(DXL_LOBYTE(self.data_dict[dxl_id][2]))  # LEN_L
-                self.param.append(DXL_HIBYTE(self.data_dict[dxl_id][2]))  # LEN_H
+                self.param.extend([
+                    dxl_id,
+                    DXL_LOBYTE(start_addr), DXL_HIBYTE(start_addr),
+                    DXL_LOBYTE(data_length), DXL_HIBYTE(data_length)
+                ])
+        
+        self.is_param_changed = False  # ✅ 다시 호출되지 않도록 플래그 설정
+
+
+
 
     def addParam(self, dxl_id, start_address, data_length):
         if dxl_id in self.data_dict:  # dxl_id already exist
@@ -122,46 +142,90 @@ class GroupBulkRead:
         self.last_result = False
 
         if self.ph.getProtocolVersion() == 1.0:
+            print("[DEBUG] Protocol version 1.0, Fast Bulk Read not supported")
             return COMM_NOT_AVAILABLE
 
-        # 예상 수신 패킷 길이 계산 (각 ID별 Error(1) + ID(1) + DATA(N) + CRC(2))
-        rx_length = sum(self.data_dict[dxl_id][PARAM_NUM_LENGTH] + 4 for dxl_id in self.data_dict)
+        # 예상 수신 패킷 길이 계산 (헤더 + Error(1) + ID(1) + Data(N) + CRC(2) 합산)
+        expected_length = 9 + sum(1 + self.data_dict[dxl_id][PARAM_NUM_LENGTH] + 2 for dxl_id in self.data_dict)
+        print(f"[DEBUG] 예상 수신 패킷 길이: {expected_length}")
 
         # 패킷 수신 (Broadcast 응답이므로 True)
         rxpacket, result = self.ph.rxPacket(self.port, True)
+        actual_length = len(rxpacket)
+        print(f"[DEBUG] 실제 수신 패킷 길이: {actual_length}, 결과: {result}")
+
         if result != COMM_SUCCESS:
-            print(f"[ERROR] RX Packet failed: {result}")
+            print(f"[ERROR] RX Packet failed with result: {result}")
             return result
 
-        index = 8
-        packet_end = len(rxpacket) - 2  # CRC 2bytes 제외
+        print(f"[DEBUG] 수신된 전체 패킷: {rxpacket}")
+
+        # 바이트 배열로 변환하여 빠른 인덱싱 지원
+        rxpacket = bytearray(rxpacket)
+
+        index = 8  # parameter 시작 위치
+        packet_end = actual_length - 2  # CRC 2bytes 제외
+
+        # while index < packet_end:
+        #     if index + 2 > packet_end:
+        #         print(f"[ERROR] Incomplete packet data at index {index}")
+        #         return COMM_RX_CORRUPT
+
+        #     error = rxpacket[index]
+        #     dxl_id = rxpacket[index + 1]
+
+        #     print(f"[DEBUG] ID: {dxl_id}, Error: {error}, Index: {index}")
+
+        #     # ID 유효성 검사
+        #     if dxl_id not in self.data_dict:
+        #         print(f"[ERROR] Unexpected ID received: {dxl_id}")
+        #         return COMM_RX_CORRUPT
+
+        #     data_length = self.data_dict[dxl_id][PARAM_NUM_LENGTH]
+
+        #     # 데이터 길이 검증
+        #     next_index = index + 2 + data_length
+        #     if next_index > packet_end:
+        #         print(f"[ERROR] Data length mismatch for ID {dxl_id}")
+        #         return COMM_RX_CORRUPT
+
+        #     # 데이터 저장 (불필요한 리스트 슬라이싱 최소화)
+        #     self.data_dict[dxl_id][PARAM_NUM_DATA] = bytearray(rxpacket[index + 2:next_index])
+
+        #     print(f"[DEBUG] ID {dxl_id} 데이터 저장됨: {self.data_dict[dxl_id][PARAM_NUM_DATA]}")
+
+        #     # 다음 데이터 세그먼트로 이동 (Error(1) + ID(1) + Data(N) + CRC(2))
+        #     index = next_index + 2
 
         while index < packet_end:
-            if index + 2 > packet_end:
-                print(f"[ERROR] Incomplete packet data at index {index}")
-                return COMM_RX_CORRUPT
-
-            error = rxpacket[index]
             dxl_id = rxpacket[index + 1]
 
             if dxl_id not in self.data_dict:
                 print(f"[ERROR] Unexpected ID received: {dxl_id}")
                 return COMM_RX_CORRUPT
 
-            data_length = self.data_dict[dxl_id][PARAM_NUM_LENGTH]
+            dxl_data = self.data_dict[dxl_id]  # ✅ 딕셔너리 조회 최소화
+            data_length = dxl_data[PARAM_NUM_LENGTH]
 
-            if index + 2 + data_length > packet_end:
+            next_index = index + 2 + data_length
+            if next_index > packet_end:
                 print(f"[ERROR] Data length mismatch for ID {dxl_id}")
                 return COMM_RX_CORRUPT
 
-            # 받은 데이터를 정확히 저장
-            self.data_dict[dxl_id][PARAM_NUM_DATA] = rxpacket[index + 2 : index + 2 + data_length]
+            # ✅ bytearray 활용
+            dxl_data[PARAM_NUM_DATA] = bytearray(rxpacket[index + 2:next_index])
 
-            # 다음 데이터 세그먼트로 이동 (Error(1) + ID(1) + Data(N) + CRC(2))
-            index += data_length + 4
+            print(f"[DEBUG] ID {dxl_id} 데이터 저장됨: {dxl_data[PARAM_NUM_DATA]}")
+
+            index = next_index + 2
+
+            print(f"[DEBUG] 다음 패킷 Index: {index}")
 
         self.last_result = True
+        print("[DEBUG] Fast Bulk Read 성공 완료")
         return COMM_SUCCESS
+
+
 
 
 
@@ -194,21 +258,41 @@ class GroupBulkRead:
 
         return True
 
+    # def getData(self, dxl_id, address, data_length):
+    #     if not self.isAvailable(dxl_id, address, data_length):
+    #         return 0
+
+    #     start_addr = self.data_dict[dxl_id][PARAM_NUM_ADDRESS]
+
+    #     if data_length == 1:
+    #         return self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr]
+    #     elif data_length == 2:
+    #         return DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr],
+    #                             self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 1])
+    #     elif data_length == 4:
+    #         return DXL_MAKEDWORD(DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 0],
+    #                                           self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 1]),
+    #                              DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 2],
+    #                                           self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 3]))
+    #     else:
+    #         return 0
+
+
+
     def getData(self, dxl_id, address, data_length):
         if not self.isAvailable(dxl_id, address, data_length):
             return 0
 
         start_addr = self.data_dict[dxl_id][PARAM_NUM_ADDRESS]
+        data = self.data_dict[dxl_id][PARAM_NUM_DATA]
+        idx = address - start_addr
 
         if data_length == 1:
-            return self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr]
+            return data[idx]
         elif data_length == 2:
-            return DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr],
-                                self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 1])
+            return data[idx] | (data[idx + 1] << 8)  # ✅ 직접 비트 연산
         elif data_length == 4:
-            return DXL_MAKEDWORD(DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 0],
-                                              self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 1]),
-                                 DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 2],
-                                              self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 3]))
-        else:
-            return 0
+            return (data[idx] | (data[idx + 1] << 8) |
+                    (data[idx + 2] << 16) | (data[idx + 3] << 24))  # ✅ 4바이트 직접 연산
+        return 0
+
