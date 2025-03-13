@@ -17,7 +17,7 @@
 # limitations under the License.
 ################################################################################
 
-# Author: Ryu Woon Jung (Leon)
+# Author: Ryu Woon Jung (Leon), Wonho Yun
 
 from .robotis_def import *
 

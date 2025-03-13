@@ -4,7 +4,7 @@ import platform
 
 setup(
     name='dynamixel_sdk',
-    version='3.9.0',
+    version='3.8.2',
     packages=['dynamixel_sdk'],
     package_dir={'': 'src'},
     license='Apache 2.0',
@@ -13,5 +13,7 @@ setup(
     url='https://github.com/ROBOTIS-GIT/DynamixelSDK',
     author='Leon Jung',
     author_email='rwjung@robotis.com',
+    author='Wonho Yun',
+    author_email='ywh@robotis.com',
     install_requires=['pyserial']
 )

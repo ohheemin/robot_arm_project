@@ -17,20 +17,7 @@
 # limitations under the License.
 ################################################################################
 
-
-################################################################################
-########################     Fast Sync Read Example      #######################
-#  Required Environment to run this example :
-#    - Protocol 2.0 supported DYNAMIXEL(X, P, PRO/PRO(A), MX 2.0 series)
-#    - DYNAMIXEL Starter Set (U2D2, U2D2 PHB, 12V SMPS)
-#  How to use the example :
-#    - Select the DYNAMIXEL in use at the MY_DXL in the example code.
-#    - Run from a proper Protocol version subdirectory.
-#    - https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_sdk/overview/
-#    - Youtube : https://youtu.be/claLIK8omIQ
-#  Author: Will Son
-#  Maintainer : Zerom, Will Son
-################################################################################
+# Author: Will Son, Wonho Yun
 
 import os
 
