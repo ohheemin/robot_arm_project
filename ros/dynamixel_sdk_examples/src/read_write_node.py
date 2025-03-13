@@ -13,19 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-# This example is written for DYNAMIXEL X(excluding XL-320) and MX(2.0) series with U2D2.
-# For other series, please refer to the product eManual and modify the Control Table addresses and other definitions.
-# To test this example, please follow the commands below.
-#
-# Open terminal #1
-# $ ros2 run dynamixel_sdk_examples read_write_node.py
-#
-# Open terminal #2 (run one of below commands at a time)
-# $ ros2 topic pub -1 /set_position dynamixel_sdk_custom_interfaces/msg/SetPosition "{id: 1, position: 0}"
-# $ ros2 topic pub -1 /set_position dynamixel_sdk_custom_interfaces/msg/SetPosition "{id: 1, position: 1000}"
-# $ ros2 service call /get_position dynamixel_sdk_custom_interfaces/srv/GetPosition "{id: 1}"
 #
 # Author: Wonho Yun, Will Son
 
@@ -51,9 +38,6 @@ PROTOCOL_VERSION = 2.0 # Default Protocol version of DYNAMIXEL X series.
 DXL_ID = 1 # Dynamixel ID : 1
 BAUDRATE = 57600 # Dynamixel default baudrate : 57600
 DEVICE_NAME = "/dev/ttyUSB0" # Check which port is being used on your controller
-                            # ex) Windows: "COM1"
-                            # Linux: "/dev/ttyUSB0"
-                            # Mac: "/dev/tty.usbserial-*"
 
 TORQUE_ENABLE = 1 # Value for enabling the torque
 TORQUE_DISABLE = 0 # Value for disabling the torque
@@ -139,8 +123,10 @@ class ReadWriteNode(Node):
         return response
 
     def __del__(self):
-        self.packet_handler.write1ByteTxRx(self.port_handler, 1, \
-                                           ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
+        self.packet_handler.write1ByteTxRx(self.port_handler,
+                                           1,
+                                           ADDR_TORQUE_ENABLE,
+                                           TORQUE_DISABLE)
         self.port_handler.closePort()
         self.get_logger().info('Shutting down read_write_node')
 
