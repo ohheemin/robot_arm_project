@@ -55,10 +55,10 @@ class GroupSyncRead:
         if self.ph.getProtocolVersion() == 1.0:
             return False
 
-        if dxl_id in self.data_dict:  # dxl_id already exist
+        if dxl_id in self.data_dict:
             return False
 
-        self.data_dict[dxl_id] = []  # [0] * self.data_length
+        self.data_dict[dxl_id] = []
 
         self.is_param_changed = True
         return True
@@ -67,7 +67,7 @@ class GroupSyncRead:
         if self.ph.getProtocolVersion() == 1.0:
             return
 
-        if dxl_id not in self.data_dict:  # NOT exist
+        if dxl_id not in self.data_dict:
             return
 
         del self.data_dict[dxl_id]
@@ -143,19 +143,16 @@ class GroupSyncRead:
         num_devices = len(self.data_dict)
         rx_param_length = (self.data_length + 4) * num_devices  # Error(1) + ID(1) + Data(N) + CRC(2))
         raw_data, result, _ = self.ph.fastSyncReadRx(self.port, BROADCAST_ID, rx_param_length)
-        print(f"[DEBUG] raw_data: {raw_data}")
         if result != COMM_SUCCESS:
             return result
 
         raw_data = bytearray(raw_data)
-
         start_index = 0
 
         valid_ids = set(self.data_dict.keys())
         for _ in range(num_devices):
             dxl_id = raw_data[start_index + 1]
             if dxl_id not in valid_ids:
-                print(f"[ERROR] Unexpected ID received: {dxl_id}")
                 return COMM_RX_CORRUPT
 
             self.data_dict[dxl_id] = bytearray(raw_data[start_index + 2 : start_index + 2 + self.data_length])

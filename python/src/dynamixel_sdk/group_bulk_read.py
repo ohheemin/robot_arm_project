@@ -117,46 +117,6 @@ class GroupBulkRead:
 
         return result
 
-    # def fastBulkReadRxPacket(self):
-    #     self.last_result = False
-
-    #     if self.ph.getProtocolVersion() == 1.0:
-    #         print("[DEBUG] Protocol version 1.0, Fast Bulk Read not supported")
-    #         return COMM_NOT_AVAILABLE
-
-    #     rxpacket, result = self.ph.rxPacket(self.port, True)
-    #     actual_length = len(rxpacket)
-
-    #     if result != COMM_SUCCESS:
-    #         print(f"[ERROR] RX Packet failed with result: {result}")
-    #         return result
-
-    #     rxpacket = bytearray(rxpacket)
-
-    #     index = 8
-    #     packet_end = actual_length - 2
-
-    #     while index < packet_end:
-    #         dxl_id = rxpacket[index + 1]
-
-    #         if dxl_id not in self.data_dict:
-    #             print(f"[ERROR] Unexpected ID received: {dxl_id}")
-    #             return COMM_RX_CORRUPT
-
-    #         dxl_data = self.data_dict[dxl_id]
-    #         data_length = dxl_data[PARAM_NUM_LENGTH]
-
-    #         next_index = index + 2 + data_length
-    #         if next_index > packet_end:
-    #             print(f"[ERROR] Data length mismatch for ID {dxl_id}")
-    #             return COMM_RX_CORRUPT
-
-    #         dxl_data[PARAM_NUM_DATA] = bytearray(rxpacket[index + 2:next_index])
-    #         index = next_index + 2
-
-    #     self.last_result = True
-    #     return COMM_SUCCESS
-
     def fastBulkReadRxPacket(self):
         self.last_result = False
 
@@ -168,8 +128,6 @@ class GroupBulkRead:
 
         # Receive bulk read response
         raw_data, result = self.ph.fastBulkReadRx(self.port, self.param)
-        print(f"[DEBUG] fastBulkReadRx result: {result}")
-        print(f"[DEBUG] fastBulkReadRx raw_data: {raw_data}")
 
         if result != COMM_SUCCESS:
             return result
@@ -179,7 +137,6 @@ class GroupBulkRead:
         # Map received data to each Dynamixel ID
         for dxl_id, data in raw_data.items():
             if dxl_id not in valid_ids:
-                print(f"[ERROR] Unexpected ID received: {dxl_id}")
                 return COMM_RX_CORRUPT
 
             expected_length = self.data_dict[dxl_id][PARAM_NUM_LENGTH]
@@ -187,23 +144,16 @@ class GroupBulkRead:
 
             # If received data is longer than expected, trim the extra bytes
             if received_length > expected_length:
-                print(f"[WARNING] Extra data received for ID {dxl_id}: trimming {received_length - expected_length} bytes")
                 data = data[:expected_length]  # Trim excess data
 
             elif received_length < expected_length:
-                print(f"[ERROR] Data length mismatch for ID {dxl_id}: expected {expected_length}, got {received_length}")
                 return COMM_RX_CORRUPT
 
             # Store data in the dictionary
             self.data_dict[dxl_id][PARAM_NUM_DATA] = bytearray(data)
-            print(f"[DEBUG] ID {dxl_id} Data Stored: {self.data_dict[dxl_id][PARAM_NUM_DATA]}")
 
         self.last_result = True
-        print(f"[DEBUG] Final data_dict-group_bulk_read: {self.data_dict}")
         return COMM_SUCCESS
-
-
-
 
     def txRxPacket(self):
         result = self.txPacket()

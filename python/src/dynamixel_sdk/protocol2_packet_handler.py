@@ -570,10 +570,7 @@ class Protocol2PacketHandler(object):
 
     def fastBulkReadRx(self, port, param):
         rxpacket, result = self.rxPacket(port, True)
-        
-        print(f"[DEBUG] Received Packet: {rxpacket}")
-        print(f"[DEBUG] Result Code: {result}")
-        
+
         if result != COMM_SUCCESS:
             return {}, result
 
@@ -585,25 +582,15 @@ class Protocol2PacketHandler(object):
             error = rxpacket[idx]
             dxl_id = rxpacket[idx + 1]
 
-            print(f"[DEBUG] Processing ID: {dxl_id}, Error: {error}, Index: {idx}")
-
-            # param에서 dxl_id의 길이 찾기
             try:
                 param_idx = param.index(dxl_id)
                 data_length = DXL_MAKEWORD(param[param_idx + 3], param[param_idx + 4])
             except ValueError:
-                print(f"[ERROR] ID {dxl_id}가 param 목록에 없음!")
                 break
 
-            # 데이터 추출
             data_segment = rxpacket[idx + 2 : idx + 2 + data_length]
             data_dict[dxl_id] = data_segment
-
-            print(f"[DEBUG] ID {dxl_id} Data Extracted: {data_segment}")
-
             idx += data_length + 4  # ERR(1) + ID(1) + Data(N) + CRC(2)
-
-        print(f"[DEBUG] Final Data Dictionary - protocol: {data_dict}")
 
         return data_dict, COMM_SUCCESS
 
@@ -795,12 +782,6 @@ class Protocol2PacketHandler(object):
         if result == COMM_SUCCESS:
             port.setPacketTimeout((11 + data_length) * param_length)
 
-        if fast_option:
-            print(f"[DEBUG] Fast Sync Read 전송 패킷 크기: {len(txpacket)} bytes")
-        else:
-            print(f"[DEBUG] Sync Read 전송 패킷 크기: {len(txpacket)} bytes")
-        print(f"[DEBUG] 실제 전송된 Instruction: {hex(txpacket[PKT_INSTRUCTION])}")
-
         return result
 
     def syncWriteTxOnly(self, port, start_address, data_length, param, param_length):
@@ -846,13 +827,6 @@ class Protocol2PacketHandler(object):
                 wait_length += DXL_MAKEWORD(param[i + 3], param[i + 4]) + 10
                 i += 5
             port.setPacketTimeout(wait_length)
-            
-            if txpacket[PKT_INSTRUCTION] == INST_FAST_BULK_READ:
-                print(f"[DEBUG] Fast bulk Read 전송 패킷 크기: {len(txpacket)} bytes")
-            else:
-                print(f"[DEBUG] Bulk Read 전송 패킷 크기: {len(txpacket)} bytes")
-            print(f"[DEBUG] 실제 전송된 Instruction: {hex(txpacket[PKT_INSTRUCTION])}")
-
 
         return result
 
