@@ -17,15 +17,14 @@
 # Author: Wonho Yun, Will Son
 
 
-import rclpy
-from rclpy.node import Node
-from rclpy.qos import QoSProfile
-
 from dynamixel_sdk import COMM_SUCCESS
 from dynamixel_sdk import PacketHandler
 from dynamixel_sdk import PortHandler
-from dynamixel_sdk_custom_interfaces.srv import GetPosition
 from dynamixel_sdk_custom_interfaces.msg import SetPosition
+from dynamixel_sdk_custom_interfaces.srv import GetPosition
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile
 
 # Control table address
 ADDR_OPERATING_MODE = 11  # Control table address is different in Dynamixel model
