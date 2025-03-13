@@ -71,7 +71,7 @@ if MY_DXL == 'X_SERIES' or MY_DXL == 'MX_SERIES':
     LEN_PRESENT_POSITION        = 4         # Data Byte Length
     DXL_MINIMUM_POSITION_VALUE  = 0         # Refer to the Minimum Position Limit of product eManual
     DXL_MAXIMUM_POSITION_VALUE  = 4095      # Refer to the Maximum Position Limit of product eManual
-    BAUDRATE                    = 57600
+    BAUDRATE                    = 1000000
 elif MY_DXL == 'PRO_SERIES':
     ADDR_TORQUE_ENABLE          = 562       # Control table address is different in DYNAMIXEL model
     ADDR_LED_RED                = 563       # R.G.B Address: 563 (red), 564 (green), 565 (blue)
@@ -93,7 +93,7 @@ elif MY_DXL == 'P_SERIES' or MY_DXL == 'PRO_A_SERIES':
     LEN_PRESENT_POSITION        = 4         # Data Byte Length
     DXL_MINIMUM_POSITION_VALUE  = -150000   # Refer to the Minimum Position Limit of product eManual
     DXL_MAXIMUM_POSITION_VALUE  = 150000    # Refer to the Maximum Position Limit of product eManual
-    BAUDRATE                    = 57600
+    BAUDRATE                    = 1000000
 
 # DYNAMIXEL Protocol Version (1.0 / 2.0)
 # https://emanual.robotis.com/docs/en/dxl/protocol2/
