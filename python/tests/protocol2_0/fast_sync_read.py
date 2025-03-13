@@ -42,13 +42,8 @@ from dynamixel_sdk import *                    # Uses Dynamixel SDK library
 #********* DYNAMIXEL Model definition *********
 #***** (Use only one definition at a time) *****
 MY_DXL = 'X_SERIES'       # X330, X430, X540, 2X430
-# MY_DXL = 'MX_SERIES'    # MX series with 2.0 firmware update.
-# MY_DXL = 'PRO_SERIES'   # H54, H42, M54, M42, L54, L42
-# MY_DXL = 'PRO_A_SERIES' # PRO series with (A) firmware update.
-# MY_DXL = 'P_SERIES'     # PH54, PH42, PM54
-# MY_DXL = 'XL320'        # [WARNING] Operating Voltage : 7.4V
 
-if MY_DXL == 'X_SERIES' or MY_DXL == 'MX_SERIES':
+if MY_DXL == 'X_SERIES':
     # Control table address (May differ by model)
     # Please refer to each product eManual
     ADDR_TORQUE_ENABLE = 64
@@ -62,33 +57,6 @@ if MY_DXL == 'X_SERIES' or MY_DXL == 'MX_SERIES':
     DXL_MINIMUM_POSITION_VALUE = 0
     DXL_MAXIMUM_POSITION_VALUE = 4095
     # Factory default Baudrate
-    BAUDRATE = 1000000
-elif MY_DXL == 'PRO_SERIES':
-    ADDR_TORQUE_ENABLE = 562
-    ADDR_GOAL_POSITION = 596
-    ADDR_PRESENT_POSITION = 611
-    LEN_GOAL_POSITION = 4
-    LEN_PRESENT_POSITION = 4
-    DXL_MINIMUM_POSITION_VALUE = -150000
-    DXL_MAXIMUM_POSITION_VALUE = 150000
-    BAUDRATE = 57600
-elif MY_DXL == 'P_SERIES' or MY_DXL == 'PRO_A_SERIES':
-    ADDR_TORQUE_ENABLE = 512
-    ADDR_GOAL_POSITION = 564
-    ADDR_PRESENT_POSITION = 580
-    LEN_GOAL_POSITION = 4
-    LEN_PRESENT_POSITION = 4
-    DXL_MINIMUM_POSITION_VALUE = -150000
-    DXL_MAXIMUM_POSITION_VALUE = 150000
-    BAUDRATE = 57600
-elif MY_DXL == 'XL320':
-    ADDR_TORQUE_ENABLE = 24
-    ADDR_GOAL_POSITION = 30
-    ADDR_PRESENT_POSITION = 37
-    LEN_GOAL_POSITION = 2
-    LEN_PRESENT_POSITION = 2
-    DXL_MINIMUM_POSITION_VALUE = 0
-    DXL_MAXIMUM_POSITION_VALUE = 512
     BAUDRATE = 1000000
 
 # DYNAMIXEL Protocol Version (1.0 / 2.0)
