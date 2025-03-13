@@ -17,7 +17,7 @@
 # limitations under the License.
 ################################################################################
 
-# Author: Ryu Woon Jung (Leon)
+# Author: Ryu Woon Jung (Leon), Wonho Yun
 
 from .robotis_def import *
 
@@ -40,22 +40,25 @@ class GroupSyncRead:
         if self.ph.getProtocolVersion() == 1.0:
             return
 
-        if not self.data_dict:  # len(self.data_dict.keys()) == 0:
+        if not self.is_param_changed:
             return
 
-        self.param = []
+        if not self.data_dict:
+            return
 
-        for dxl_id in self.data_dict:
-            self.param.append(dxl_id)
+        self.param = list(self.data_dict.keys())
+
+        self.is_param_changed = False
+
 
     def addParam(self, dxl_id):
         if self.ph.getProtocolVersion() == 1.0:
             return False
 
-        if dxl_id in self.data_dict:  # dxl_id already exist
+        if dxl_id in self.data_dict:
             return False
 
-        self.data_dict[dxl_id] = []  # [0] * self.data_length
+        self.data_dict[dxl_id] = []
 
         self.is_param_changed = True
         return True
@@ -64,7 +67,7 @@ class GroupSyncRead:
         if self.ph.getProtocolVersion() == 1.0:
             return
 
-        if dxl_id not in self.data_dict:  # NOT exist
+        if dxl_id not in self.data_dict:
             return
 
         del self.data_dict[dxl_id]
@@ -84,8 +87,28 @@ class GroupSyncRead:
         if self.is_param_changed is True or not self.param:
             self.makeParam()
 
-        return self.ph.syncReadTx(self.port, self.start_address, self.data_length, self.param,
-                                  len(self.data_dict.keys()) * 1)
+        return self.ph.syncReadTx(
+            self.port,
+            self.start_address,
+            self.data_length,
+            self.param,
+            len(self.data_dict.keys()) * 1,
+            False)
+
+    def fastSyncReadTxPacket(self):
+        if self.ph.getProtocolVersion() == 1.0 or len(self.data_dict.keys()) == 0:
+            return COMM_NOT_AVAILABLE
+
+        if self.is_param_changed is True or not self.param:
+            self.makeParam()
+
+        return self.ph.syncReadTx(
+            self.port,
+            self.start_address,
+            self.data_length,
+            self.param,
+            len(self.data_dict.keys()) * 1,
+            True)
 
     def rxPacket(self):
         self.last_result = False
@@ -108,15 +131,54 @@ class GroupSyncRead:
 
         return result
 
+    def fastSyncReadRxPacket(self):
+        self.last_result = False
+
+        if self.ph.getProtocolVersion() == 1.0:
+            return COMM_NOT_AVAILABLE
+
+        if not self.data_dict:
+            return COMM_NOT_AVAILABLE
+
+        num_devices = len(self.data_dict)
+        rx_param_length = (self.data_length + 4) * num_devices  # Error(1) + ID(1) + Data(N) + CRC(2))
+        raw_data, result, _ = self.ph.fastSyncReadRx(self.port, BROADCAST_ID, rx_param_length)
+        if result != COMM_SUCCESS:
+            return result
+
+        raw_data = bytearray(raw_data)
+        start_index = 0
+
+        valid_ids = set(self.data_dict.keys())
+        for _ in range(num_devices):
+            dxl_id = raw_data[start_index + 1]
+            if dxl_id not in valid_ids:
+                return COMM_RX_CORRUPT
+
+            self.data_dict[dxl_id] = bytearray(raw_data[start_index + 2 : start_index + 2 + self.data_length])
+            start_index += self.data_length + 4
+
+        self.last_result = True
+        return COMM_SUCCESS
+
     def txRxPacket(self):
         if self.ph.getProtocolVersion() == 1.0:
             return COMM_NOT_AVAILABLE
 
-        result = self.txPacket()
-        if result != COMM_SUCCESS:
+        if (result := self.txPacket()) != COMM_SUCCESS:
             return result
 
         return self.rxPacket()
+
+    def fastSyncRead(self):
+        if self.ph.getProtocolVersion() == 1.0:
+            return COMM_NOT_AVAILABLE
+
+        result = self.fastSyncReadTxPacket()
+        if result != COMM_SUCCESS:
+            return result
+
+        return self.fastSyncReadRxPacket()
 
     def isAvailable(self, dxl_id, address, data_length):
         if self.ph.getProtocolVersion() == 1.0 or self.last_result is False or dxl_id not in self.data_dict:
@@ -131,15 +193,15 @@ class GroupSyncRead:
         if not self.isAvailable(dxl_id, address, data_length):
             return 0
 
+        start_idx = address - self.start_address
+        data = self.data_dict[dxl_id]
+
         if data_length == 1:
-            return self.data_dict[dxl_id][address - self.start_address]
+            return data[start_idx]
         elif data_length == 2:
-            return DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address],
-                                self.data_dict[dxl_id][address - self.start_address + 1])
+            return (data[start_idx] | (data[start_idx + 1] << 8))
         elif data_length == 4:
-            return DXL_MAKEDWORD(DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address + 0],
-                                              self.data_dict[dxl_id][address - self.start_address + 1]),
-                                 DXL_MAKEWORD(self.data_dict[dxl_id][address - self.start_address + 2],
-                                              self.data_dict[dxl_id][address - self.start_address + 3]))
+            return ((data[start_idx] | (data[start_idx + 1] << 8)) |
+                    ((data[start_idx + 2] | (data[start_idx + 3] << 8)) << 16))
         else:
             return 0
