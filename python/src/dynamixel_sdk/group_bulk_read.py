@@ -38,26 +38,9 @@ class GroupBulkRead:
 
         self.clearParam()
 
-    # def makeParam(self):
-    #     if not self.data_dict:
-    #         return
-
-    #     self.param = []
-
-    #     for dxl_id in self.data_dict:
-    #         if self.ph.getProtocolVersion() == 1.0:
-    #             self.param.append(self.data_dict[dxl_id][2])  # LEN
-    #             self.param.append(dxl_id)  # ID
-    #             self.param.append(self.data_dict[dxl_id][1])  # ADDR
-    #         else:
-    #             self.param.append(dxl_id)  # ID
-    #             self.param.append(DXL_LOBYTE(self.data_dict[dxl_id][1]))  # ADDR_L
-    #             self.param.append(DXL_HIBYTE(self.data_dict[dxl_id][1]))  # ADDR_H
-    #             self.param.append(DXL_LOBYTE(self.data_dict[dxl_id][2]))  # LEN_L
-    #             self.param.append(DXL_HIBYTE(self.data_dict[dxl_id][2]))  # LEN_H
     def makeParam(self):
         if not self.is_param_changed or not self.data_dict:
-            return  # ✅ 불필요한 호출 제거
+            return
 
         self.param = []
 
@@ -70,11 +53,7 @@ class GroupBulkRead:
                     DXL_LOBYTE(start_addr), DXL_HIBYTE(start_addr),
                     DXL_LOBYTE(data_length), DXL_HIBYTE(data_length)
                 ])
-        
-        self.is_param_changed = False  # ✅ 다시 호출되지 않도록 플래그 설정
-
-
-
+        self.is_param_changed = False
 
     def addParam(self, dxl_id, start_address, data_length):
         if dxl_id in self.data_dict:  # dxl_id already exist
@@ -138,94 +117,90 @@ class GroupBulkRead:
 
         return result
 
+    # def fastBulkReadRxPacket(self):
+    #     self.last_result = False
+
+    #     if self.ph.getProtocolVersion() == 1.0:
+    #         print("[DEBUG] Protocol version 1.0, Fast Bulk Read not supported")
+    #         return COMM_NOT_AVAILABLE
+
+    #     rxpacket, result = self.ph.rxPacket(self.port, True)
+    #     actual_length = len(rxpacket)
+
+    #     if result != COMM_SUCCESS:
+    #         print(f"[ERROR] RX Packet failed with result: {result}")
+    #         return result
+
+    #     rxpacket = bytearray(rxpacket)
+
+    #     index = 8
+    #     packet_end = actual_length - 2
+
+    #     while index < packet_end:
+    #         dxl_id = rxpacket[index + 1]
+
+    #         if dxl_id not in self.data_dict:
+    #             print(f"[ERROR] Unexpected ID received: {dxl_id}")
+    #             return COMM_RX_CORRUPT
+
+    #         dxl_data = self.data_dict[dxl_id]
+    #         data_length = dxl_data[PARAM_NUM_LENGTH]
+
+    #         next_index = index + 2 + data_length
+    #         if next_index > packet_end:
+    #             print(f"[ERROR] Data length mismatch for ID {dxl_id}")
+    #             return COMM_RX_CORRUPT
+
+    #         dxl_data[PARAM_NUM_DATA] = bytearray(rxpacket[index + 2:next_index])
+    #         index = next_index + 2
+
+    #     self.last_result = True
+    #     return COMM_SUCCESS
+
     def fastBulkReadRxPacket(self):
         self.last_result = False
 
         if self.ph.getProtocolVersion() == 1.0:
-            print("[DEBUG] Protocol version 1.0, Fast Bulk Read not supported")
             return COMM_NOT_AVAILABLE
 
-        # 예상 수신 패킷 길이 계산 (헤더 + Error(1) + ID(1) + Data(N) + CRC(2) 합산)
-        expected_length = 9 + sum(1 + self.data_dict[dxl_id][PARAM_NUM_LENGTH] + 2 for dxl_id in self.data_dict)
-        print(f"[DEBUG] 예상 수신 패킷 길이: {expected_length}")
+        if not self.data_dict:
+            return COMM_NOT_AVAILABLE
 
-        # 패킷 수신 (Broadcast 응답이므로 True)
-        rxpacket, result = self.ph.rxPacket(self.port, True)
-        actual_length = len(rxpacket)
-        print(f"[DEBUG] 실제 수신 패킷 길이: {actual_length}, 결과: {result}")
+        # Receive bulk read response
+        raw_data, result = self.ph.fastBulkReadRx(self.port, self.param)
+        print(f"[DEBUG] fastBulkReadRx result: {result}")
+        print(f"[DEBUG] fastBulkReadRx raw_data: {raw_data}")
 
         if result != COMM_SUCCESS:
-            print(f"[ERROR] RX Packet failed with result: {result}")
             return result
 
-        print(f"[DEBUG] 수신된 전체 패킷: {rxpacket}")
+        valid_ids = set(self.data_dict.keys())
 
-        # 바이트 배열로 변환하여 빠른 인덱싱 지원
-        rxpacket = bytearray(rxpacket)
-
-        index = 8  # parameter 시작 위치
-        packet_end = actual_length - 2  # CRC 2bytes 제외
-
-        # while index < packet_end:
-        #     if index + 2 > packet_end:
-        #         print(f"[ERROR] Incomplete packet data at index {index}")
-        #         return COMM_RX_CORRUPT
-
-        #     error = rxpacket[index]
-        #     dxl_id = rxpacket[index + 1]
-
-        #     print(f"[DEBUG] ID: {dxl_id}, Error: {error}, Index: {index}")
-
-        #     # ID 유효성 검사
-        #     if dxl_id not in self.data_dict:
-        #         print(f"[ERROR] Unexpected ID received: {dxl_id}")
-        #         return COMM_RX_CORRUPT
-
-        #     data_length = self.data_dict[dxl_id][PARAM_NUM_LENGTH]
-
-        #     # 데이터 길이 검증
-        #     next_index = index + 2 + data_length
-        #     if next_index > packet_end:
-        #         print(f"[ERROR] Data length mismatch for ID {dxl_id}")
-        #         return COMM_RX_CORRUPT
-
-        #     # 데이터 저장 (불필요한 리스트 슬라이싱 최소화)
-        #     self.data_dict[dxl_id][PARAM_NUM_DATA] = bytearray(rxpacket[index + 2:next_index])
-
-        #     print(f"[DEBUG] ID {dxl_id} 데이터 저장됨: {self.data_dict[dxl_id][PARAM_NUM_DATA]}")
-
-        #     # 다음 데이터 세그먼트로 이동 (Error(1) + ID(1) + Data(N) + CRC(2))
-        #     index = next_index + 2
-
-        while index < packet_end:
-            dxl_id = rxpacket[index + 1]
-
-            if dxl_id not in self.data_dict:
+        # Map received data to each Dynamixel ID
+        for dxl_id, data in raw_data.items():
+            if dxl_id not in valid_ids:
                 print(f"[ERROR] Unexpected ID received: {dxl_id}")
                 return COMM_RX_CORRUPT
 
-            dxl_data = self.data_dict[dxl_id]  # ✅ 딕셔너리 조회 최소화
-            data_length = dxl_data[PARAM_NUM_LENGTH]
+            expected_length = self.data_dict[dxl_id][PARAM_NUM_LENGTH]
+            received_length = len(data)
 
-            next_index = index + 2 + data_length
-            if next_index > packet_end:
-                print(f"[ERROR] Data length mismatch for ID {dxl_id}")
+            # If received data is longer than expected, trim the extra bytes
+            if received_length > expected_length:
+                print(f"[WARNING] Extra data received for ID {dxl_id}: trimming {received_length - expected_length} bytes")
+                data = data[:expected_length]  # Trim excess data
+
+            elif received_length < expected_length:
+                print(f"[ERROR] Data length mismatch for ID {dxl_id}: expected {expected_length}, got {received_length}")
                 return COMM_RX_CORRUPT
 
-            # ✅ bytearray 활용
-            dxl_data[PARAM_NUM_DATA] = bytearray(rxpacket[index + 2:next_index])
-
-            print(f"[DEBUG] ID {dxl_id} 데이터 저장됨: {dxl_data[PARAM_NUM_DATA]}")
-
-            index = next_index + 2
-
-            print(f"[DEBUG] 다음 패킷 Index: {index}")
+            # Store data in the dictionary
+            self.data_dict[dxl_id][PARAM_NUM_DATA] = bytearray(data)
+            print(f"[DEBUG] ID {dxl_id} Data Stored: {self.data_dict[dxl_id][PARAM_NUM_DATA]}")
 
         self.last_result = True
-        print("[DEBUG] Fast Bulk Read 성공 완료")
+        print(f"[DEBUG] Final data_dict-group_bulk_read: {self.data_dict}")
         return COMM_SUCCESS
-
-
 
 
 
@@ -240,11 +215,11 @@ class GroupBulkRead:
     def fastBulkRead(self):
         if self.ph.getProtocolVersion() == 1.0:
             return COMM_NOT_AVAILABLE
-        
+
         result = self.fastBulkReadTxPacket()
         if result != COMM_SUCCESS:
             return result
-        
+
         return self.fastBulkReadRxPacket()
 
     def isAvailable(self, dxl_id, address, data_length):
@@ -258,27 +233,6 @@ class GroupBulkRead:
 
         return True
 
-    # def getData(self, dxl_id, address, data_length):
-    #     if not self.isAvailable(dxl_id, address, data_length):
-    #         return 0
-
-    #     start_addr = self.data_dict[dxl_id][PARAM_NUM_ADDRESS]
-
-    #     if data_length == 1:
-    #         return self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr]
-    #     elif data_length == 2:
-    #         return DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr],
-    #                             self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 1])
-    #     elif data_length == 4:
-    #         return DXL_MAKEDWORD(DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 0],
-    #                                           self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 1]),
-    #                              DXL_MAKEWORD(self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 2],
-    #                                           self.data_dict[dxl_id][PARAM_NUM_DATA][address - start_addr + 3]))
-    #     else:
-    #         return 0
-
-
-
     def getData(self, dxl_id, address, data_length):
         if not self.isAvailable(dxl_id, address, data_length):
             return 0
@@ -290,9 +244,8 @@ class GroupBulkRead:
         if data_length == 1:
             return data[idx]
         elif data_length == 2:
-            return data[idx] | (data[idx + 1] << 8)  # ✅ 직접 비트 연산
+            return data[idx] | (data[idx + 1] << 8)
         elif data_length == 4:
             return (data[idx] | (data[idx + 1] << 8) |
-                    (data[idx + 2] << 16) | (data[idx + 3] << 24))  # ✅ 4바이트 직접 연산
+                    (data[idx + 2] << 16) | (data[idx + 3] << 24))
         return 0
-

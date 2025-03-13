@@ -568,8 +568,12 @@ class Protocol2PacketHandler(object):
 
         return data, result, error
 
-    def fastBulkReadRx(self, port, param, param_length):
+    def fastBulkReadRx(self, port, param):
         rxpacket, result = self.rxPacket(port, True)
+        
+        print(f"[DEBUG] Received Packet: {rxpacket}")
+        print(f"[DEBUG] Result Code: {result}")
+        
         if result != COMM_SUCCESS:
             return {}, result
 
@@ -581,6 +585,8 @@ class Protocol2PacketHandler(object):
             error = rxpacket[idx]
             dxl_id = rxpacket[idx + 1]
 
+            print(f"[DEBUG] Processing ID: {dxl_id}, Error: {error}, Index: {idx}")
+
             # param에서 dxl_id의 길이 찾기
             try:
                 param_idx = param.index(dxl_id)
@@ -589,10 +595,15 @@ class Protocol2PacketHandler(object):
                 print(f"[ERROR] ID {dxl_id}가 param 목록에 없음!")
                 break
 
+            # 데이터 추출
             data_segment = rxpacket[idx + 2 : idx + 2 + data_length]
             data_dict[dxl_id] = data_segment
 
+            print(f"[DEBUG] ID {dxl_id} Data Extracted: {data_segment}")
+
             idx += data_length + 4  # ERR(1) + ID(1) + Data(N) + CRC(2)
+
+        print(f"[DEBUG] Final Data Dictionary - protocol: {data_dict}")
 
         return data_dict, COMM_SUCCESS
 
