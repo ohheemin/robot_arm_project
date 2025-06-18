@@ -1,0 +1,3 @@
+[0.000000] (-) TimerEvent: {}
+[0.000202] (-) JobUnselected: {'identifier': 'dynamixel_control'}
+[0.000224] (-) EventReactorShutdown: {}
