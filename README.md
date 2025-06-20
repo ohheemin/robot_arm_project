@@ -16,3 +16,5 @@
 # 코드 실행
 - ./dynamixel_control/draw_circle.py
 - ./dynamixel_control/move_box.py
+
+- "python3 filename" or "ros2 run packagename filename"
