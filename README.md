@@ -18,3 +18,4 @@
 - ./dynamixel_control/move_box.py
 
 - "python3 filename" or "ros2 run packagename filename"
+- rxtx 통신방식과 inverse kinematics solve를 위해 ikpy solver를 채택 
